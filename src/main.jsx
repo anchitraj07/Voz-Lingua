@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowRight, Check, ChevronDown, Globe2, GraduationCap,
-  MessageCircle, Play, Star, Sparkles, BookOpen, Users, Menu, X
+  MessageCircle, Play, Star, Sparkles, BookOpen, Users, Menu, X, Bell
 } from "lucide-react";
+import { notifyNewDemo, subscribeAdminToPush } from "./services/notificationService";
 import "./styles.css";
 
 const courses = [
@@ -226,6 +227,10 @@ function App() {
               // Replace YOUR_WHATSAPP_NUMBER with your actual phone number including country code (e.g. 919876543210 for India)
               const phoneNumber = "919289731089";
               const message = `Hello! I would like to book a free demo.%0A%0A*Name:* ${name}%0A*Email:* ${email}%0A*Program:* ${program}`;
+              
+              // Send push notification via ntfy
+              notifyNewDemo({ name, email, program });
+
               window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
             }}>
               <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" aria-label="Your name" />
@@ -250,7 +255,16 @@ function App() {
           <div><strong>Explore</strong><button onClick={() => go("courses")}>Courses</button><button onClick={() => go("method")}>Our Method</button><button onClick={() => go("faq")}>FAQ</button></div>
           <div><strong>Contact</strong><span>India</span><span>Online Classes</span><button onClick={() => go("contact")}>Book a Free Demo</button></div>
         </div>
-        <div className="container copyright">© {new Date().getFullYear()} VOZ LINGUA. All rights reserved.</div>
+        <div className="container copyright" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>© {new Date().getFullYear()} VOZ LINGUA. All rights reserved.</span>
+          <button 
+            onClick={subscribeAdminToPush} 
+            title="Admin: Enable Push Notifications" 
+            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer" }}
+          >
+            <Bell size={14} />
+          </button>
+        </div>
       </footer>
     </div>
   );
