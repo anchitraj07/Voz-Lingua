@@ -39,7 +39,7 @@ function App() {
       <header className="nav">
         <div className="container nav-inner">
           <button className="brand" onClick={() => go("home")}>
-            <span className="brand-mark">V</span>
+            <img src="/logo.svg" alt="VOZ LINGUA" className="brand-logo" />
             <span>VOZ <em>LINGUA</em></span>
           </button>
 
@@ -251,7 +251,7 @@ function App() {
 
       <footer>
         <div className="container footer-grid">
-          <div><button className="brand footer-brand" onClick={() => go("home")}><span className="brand-mark">V</span><span>VOZ <em>LINGUA</em></span></button><p>French learning, made practical.</p></div>
+          <div><button className="brand footer-brand" onClick={() => go("home")}><img src="/logo.svg" alt="VOZ LINGUA" className="brand-logo" /><span>VOZ <em>LINGUA</em></span></button><p>French learning, made practical.</p></div>
           <div><strong>Explore</strong><button onClick={() => go("courses")}>Courses</button><button onClick={() => go("method")}>Our Method</button><button onClick={() => go("faq")}>FAQ</button></div>
           <div><strong>Contact</strong><span>India</span><span>Online Classes</span><button onClick={() => go("contact")}>Book a Free Demo</button></div>
         </div>
