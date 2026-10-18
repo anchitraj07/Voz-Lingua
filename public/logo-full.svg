@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200">
+  <title>VL Logo</title>
+  <desc>Scalable vector logo with an orange circular field and white V and L geometric letterforms.</desc>
+
+  <!-- Orange circular field -->
+  <circle cx="560" cy="560" r="350" fill="#EF8A00"/>
+
+  <!-- V -->
+  <path fill="#FFFFFF" d="
+    M 299 339
+    L 590 339
+    L 444 773
+    Z"/>
+
+  <!-- L -->
+  <path fill="#FFFFFF" d="
+    M 623 321
+    L 713 657
+    L 850 754
+    L 623 754
+    Z"/>
+</svg>

@@ -1,5 +1,22 @@
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="50" cy="50" r="50" fill="#EF8B09" />
-  <polygon points="15,23 46,23 30.5,75" fill="#ffffff" />
-  <polygon points="50,20 50,75 82,75 62,60" fill="#ffffff" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="210 210 700 700" width="700" height="700">
+  <title>VL Logo</title>
+  <desc>Scalable vector logo with an orange circular field and white V and L geometric letterforms.</desc>
+
+  <!-- Orange circular field -->
+  <circle cx="560" cy="560" r="350" fill="#EF8A00"/>
+
+  <!-- V -->
+  <path fill="#FFFFFF" d="
+    M 299 339
+    L 590 339
+    L 444 773
+    Z"/>
+
+  <!-- L -->
+  <path fill="#FFFFFF" d="
+    M 623 321
+    L 713 657
+    L 850 754
+    L 623 754
+    Z"/>
 </svg>

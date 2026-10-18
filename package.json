@@ -1,21 +1,25 @@
 {
   "name": "voz-lingua",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
+  "engines": { "node": ">=22.13" },
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.js",
+    "dev:client": "vite",
+    "dev:server": "node --watch --no-warnings server/index.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "start": "NODE_ENV=production node --no-warnings server/index.js",
+    "create-admin": "node --no-warnings scripts/create-admin.js",
+    "test": "node --no-warnings --test tests/server.test.mjs"
   },
   "dependencies": {
-    "@netlify/blobs": "^11.1.1",
-    "@vitejs/plugin-react": "^5.0.4",
     "lucide-react": "^0.468.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "typescript": "^5.9.2",
-    "vite": "^7.1.7",
-    "web-push": "^3.6.7"
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.7"
   }
 }
