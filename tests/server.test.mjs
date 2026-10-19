@@ -9,11 +9,19 @@ process.env.DB_PATH = path.join(tmp, 't.db');
 process.env.ADMIN_EMAIL = 'owner@voz.test';
 process.env.ADMIN_PASSWORD = 'Zx9-Strong-Passphrase';
 process.env.NODE_ENV = 'test';
+process.env.KEYCLOAK_ISSUER_URL = '';
+process.env.KEYCLOAK_CLIENT_ID = '';
+process.env.APP_ORIGIN = '';
 
 const { start } = await import('../server/index.js');
 let server, base;
 before(async () => { server = await start(0, '127.0.0.1'); base = `http://127.0.0.1:${server.address().port}`; });
-after(() => { server.close(); fs.rmSync(tmp, { recursive: true, force: true }); });
+after(async () => {
+  await new Promise((resolve) => server.close(resolve));
+  const { db } = await import('../server/db.js');
+  db.close();
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
 
 class Client {
   constructor() { this.cookie = ''; this.csrf = ''; }
@@ -44,6 +52,58 @@ test('public catalogue + security headers', async () => {
   assert.match(r.headers.get('content-security-policy'), /default-src 'self'/);
   assert.equal(r.headers.get('x-frame-options'), 'DENY');
   assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+});
+
+test('Keycloak OIDC endpoints report disabled configuration explicitly', async () => {
+  const c = new Client();
+  assert.deepEqual((await c.req('GET', '/api/auth/keycloak/status')).data, { enabled: false });
+  const start = await c.req('GET', '/api/auth/keycloak/start?mode=signup&terms=1');
+  assert.equal(start.status, 503);
+  assert.match(start.data.error, /Keycloak sign-in is not configured/);
+});
+
+test('Keycloak OIDC callbacks require the initiating browser binding', async () => {
+  const { verifyBrowserBinding } = await import('../server/routes/oidc.js');
+  const { sha256 } = await import('../server/security.js');
+  const browserToken = 'browser-bound-random-value';
+  const transaction = { browser_binding_hash: sha256(browserToken) };
+  assert.equal(verifyBrowserBinding(transaction, browserToken), true);
+  assert.equal(verifyBrowserBinding(transaction, 'different-browser-token'), false);
+  assert.equal(verifyBrowserBinding(transaction, undefined), false);
+  assert.equal(verifyBrowserBinding({ browser_binding_hash: null }, browserToken), false);
+});
+
+test('Keycloak identity sync creates a passwordless local student and links verified existing email', async () => {
+  const { syncUser } = await import('../server/routes/oidc.js');
+  const { q } = await import('../server/db.js');
+  const { verifyPassword } = await import('../server/security.js');
+  const id = syncUser({
+    sub: 'kc-student-001', email: 'keycloak@example.com', name: 'Keycloak Student', email_verified: true,
+  });
+  const user = q.get('SELECT * FROM users WHERE id=?', id);
+  assert.equal(user.role, 'student');
+  assert.equal(user.level, 'A0');
+  assert.equal(user.timezone, 'Asia/Kolkata');
+  assert.equal(user.password_hash, '!keycloak-only');
+  assert.equal(await verifyPassword('not-a-password', user.password_hash), false);
+  assert.equal(q.get('SELECT subject FROM external_identities WHERE user_id=?', id).subject, 'kc-student-001');
+
+  const legacyId = Number(q.run(
+    'INSERT INTO users(name,email,password_hash,role,created_at) VALUES(?,?,?,?,?)',
+    'Legacy Admin', 'legacy-admin@example.com', '!legacy-password', 'admin', Date.now(),
+  ).lastInsertRowid);
+  const linked = syncUser({
+    sub: 'kc-admin-verified', email: 'legacy-admin@example.com', name: 'Admin from Keycloak', email_verified: true,
+  });
+  assert.equal(linked, legacyId);
+  assert.equal(q.get('SELECT role FROM users WHERE id=?', linked).role, 'admin');
+  assert.equal(q.get('SELECT name FROM users WHERE id=?', linked).name, 'Admin from Keycloak');
+
+  q.run('INSERT INTO users(name,email,password_hash,is_active,created_at) VALUES(?,?,?,?,?)',
+    'Disabled User', 'disabled@example.com', '!legacy-password', 0, Date.now());
+  assert.throws(() => syncUser({
+    sub: 'kc-disabled-user', email: 'disabled@example.com', name: 'Disabled User', email_verified: true,
+  }), /account is disabled/);
 });
 
 test('signup validation, cookie flags, duplicate handling', async () => {

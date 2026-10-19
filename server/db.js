@@ -110,7 +110,28 @@ CREATE TABLE IF NOT EXISTS audit_log(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER, event TEXT NOT NULL, ip TEXT, detail TEXT, created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS external_identities(
+  provider TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  linked_at INTEGER NOT NULL,
+  PRIMARY KEY(provider, subject),
+  UNIQUE(provider, user_id)
+);
+CREATE TABLE IF NOT EXISTS oidc_transactions(
+  state TEXT PRIMARY KEY,
+  code_verifier TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  browser_binding_hash TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK(mode IN ('login','signup')),
+  terms_accepted INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
 `);
+
+if (!db.prepare('PRAGMA table_info(oidc_transactions)').all().some((column) => column.name === 'browser_binding_hash')) {
+  db.exec('ALTER TABLE oidc_transactions ADD COLUMN browser_binding_hash TEXT');
+}
 
 export function tx(fn) {
   db.exec('BEGIN IMMEDIATE');

@@ -15,13 +15,31 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const apply = useCallback((d) => { setCsrf(d?.csrf ?? null); setUser(d?.user ?? null); }, []);
-  useEffect(() => { api('/auth/me').then(apply).catch(() => apply(null)).finally(() => setLoading(false)); }, [apply]);
+  const [keycloak, setKeycloak] = useState(null); // null = still checking, true/false once known
 
-  const login = async (email, password) => { apply(await api('/auth/login', { method: 'POST', body: { email, password } })); };
-  const signup = async (form) => { apply(await api('/auth/signup', { method: 'POST', body: form })); };
-  const logout = async () => { try { await api('/auth/logout', { method: 'POST' }); } catch { /* already logged out */ } apply(null); };
+  const apply = useCallback((d) => { setCsrf(d?.csrf ?? null); setUser(d?.user ?? null); }, []);
+  useEffect(() => {
+    api('/auth/keycloak/status').then((d) => setKeycloak(Boolean(d.enabled))).catch(() => setKeycloak(false));
+    api('/auth/me').then(apply).catch(() => apply(null)).finally(() => setLoading(false));
+  }, [apply]);
+
+  // Keycloak mode: redirect to the hosted login. Local mode: email + password straight to the API.
+  const login = async ({ email, password } = {}) => {
+    if (keycloak) { window.location.assign('/api/auth/keycloak/start?mode=login'); return; }
+    apply(await api('/auth/login', { method: 'POST', body: { email, password } }));
+  };
+  const signup = async ({ acceptTerms, name, email, phone, level, password } = {}) => {
+    if (!acceptTerms) throw new Error('Please accept the Terms of Service and Privacy Policy before signing up.');
+    if (keycloak) { window.location.assign('/api/auth/keycloak/start?mode=signup&terms=1'); return; }
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    apply(await api('/auth/signup', { method: 'POST', body: { name, email, phone, level, password, acceptTerms: true, timezone } }));
+  };
+  const logout = async () => {
+    try { await api('/auth/logout', { method: 'POST' }); } catch { /* the local session may already be expired */ }
+    apply(null);
+    if (keycloak) window.location.assign('/api/auth/keycloak/logout');
+  };
   const forgetSession = () => apply(null);
 
-  return <Ctx.Provider value={{ user, loading, login, signup, logout, setUser, forgetSession }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, loading, keycloak, login, signup, logout, setUser, forgetSession }}>{children}</Ctx.Provider>;
 }

@@ -19,7 +19,12 @@ export function json(res, status, body) {
 }
 
 export function setSessionCookie(res, token, maxAgeSec) {
-  res.setHeader('Set-Cookie', `${COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAgeSec}${config.cookieSecure ? '; Secure' : ''}`);
+  appendSetCookie(res, `${COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAgeSec}${config.cookieSecure ? '; Secure' : ''}`);
+}
+
+export function appendSetCookie(res, cookie) {
+  const current = res.getHeader('Set-Cookie');
+  res.setHeader('Set-Cookie', current === undefined ? cookie : [...(Array.isArray(current) ? current : [current]), cookie]);
 }
 
 function readBody(req, limit = 100 * 1024) {

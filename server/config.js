@@ -14,6 +14,11 @@ try {
 
 const env = process.env;
 const isProd = env.NODE_ENV === 'production';
+// Keycloak is used only when KEYCLOAK_ISSUER_URL is set explicitly (in .env or the environment).
+// Without it the site uses its built-in email + password accounts, so nothing external has to be running.
+const keycloakIssuerUrl = env.KEYCLOAK_ISSUER_URL || '';
+const keycloakClientId = env.KEYCLOAK_CLIENT_ID || (keycloakIssuerUrl ? 'voz-lingua-web' : '');
+const appOrigin = env.APP_ORIGIN || (keycloakIssuerUrl && !isProd ? 'http://localhost:5173' : '');
 
 export const config = {
   root,
@@ -21,10 +26,21 @@ export const config = {
   port: Number(env.PORT || 3001),
   host: env.HOST || '127.0.0.1',
   dbPath: env.DB_PATH || path.join(root, 'data', 'voz-lingua.db'),
+  keycloakIssuerUrl,
+  keycloakClientId,
+  appOrigin,
+  keycloakEnabled: Boolean(keycloakIssuerUrl && keycloakClientId && appOrigin),
+  keycloakRequireVerifiedEmail: env.KEYCLOAK_REQUIRE_VERIFIED_EMAIL
+    ? env.KEYCLOAK_REQUIRE_VERIFIED_EMAIL === '1'
+    : isProd,
   // Only trust X-Forwarded-* when you are behind your own reverse proxy (nginx, Caddy, Cloudflare...)
   trustProxy: env.TRUST_PROXY === '1',
   cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === '1' : isProd,
-  allowedOrigins: (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
+  // In development the Vite proxy rewrites Host to the API address, so trust the Vite dev origins explicitly.
+  allowedOrigins: [
+    ...(env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
+    ...(isProd || env.NODE_ENV === 'test' ? [] : ['http://localhost:5173', 'http://127.0.0.1:5173']),
+  ],
   adminEmail: env.ADMIN_EMAIL || '',
   adminPassword: env.ADMIN_PASSWORD || '',
   // Pricing/payment is not built yet, so new plan selections wait for admin confirmation by default.

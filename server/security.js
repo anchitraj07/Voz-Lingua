@@ -17,6 +17,7 @@ export async function hashPassword(password) {
   return `scrypt$${N}$${R}$${P}$${salt.toString('base64')}$${key.toString('base64')}`;
 }
 export async function verifyPassword(password, stored) {
+  if (typeof stored !== 'string' || !stored.startsWith('scrypt$')) return false;
   try {
     const [, n, r, p, salt, hash] = stored.split('$');
     const expected = Buffer.from(hash, 'base64');

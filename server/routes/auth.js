@@ -5,7 +5,7 @@ import * as S from '../security.js';
 
 const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, level: u.level, timezone: u.timezone });
 
-function startSession(res, req, userId, ip) {
+export function startSession(res, req, userId, ip) {
   const token = S.randomToken(32), csrf = S.randomToken(24), now = Date.now();
   q.run('INSERT INTO sessions(token_hash,user_id,csrf,created_at,last_seen,expires_at,ip,user_agent) VALUES(?,?,?,?,?,?,?,?)',
     S.sha256(token), userId, csrf, now, now, now + config.sessionMaxMs, ip, String(req.headers['user-agent'] || '').slice(0, 200));
@@ -14,6 +14,7 @@ function startSession(res, req, userId, ip) {
 }
 
 route('POST', '/api/auth/signup', { limit: { name: 'signup', max: 8, windowMs: 3600e3 } }, async ({ req, res, body, ip }) => {
+  if (config.keycloakEnabled) throw new S.HttpError(410, 'Please create your account using Keycloak.');
   const name = S.str(body.name, 'Name', { min: 2, max: 80 });
   const email = S.email(body.email);
   const phone = S.phone(body.phone);
@@ -35,6 +36,7 @@ route('POST', '/api/auth/signup', { limit: { name: 'signup', max: 8, windowMs: 3
 });
 
 route('POST', '/api/auth/login', { limit: { name: 'login-ip', max: 30, windowMs: 15 * 60e3 } }, async ({ req, res, body, ip }) => {
+  if (config.keycloakEnabled) throw new S.HttpError(410, 'Please sign in using Keycloak.');
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase().slice(0, 254) : '';
   const password = typeof body.password === 'string' ? body.password.slice(0, 200) : '';
   const generic = new S.HttpError(401, 'Incorrect email or password');
@@ -92,6 +94,9 @@ route('PATCH', '/api/me', { auth: 'user' }, ({ user, body }) => {
 });
 
 route('POST', '/api/me/password', { auth: 'user', limit: { name: 'pw-change', max: 10, windowMs: 3600e3 } }, async ({ req, res, user, session, body, ip }) => {
+  if (q.get('SELECT 1 FROM external_identities WHERE provider=? AND user_id=?', 'keycloak', user.id)) {
+    throw new S.HttpError(409, 'Manage your password through Keycloak.');
+  }
   const row = q.get('SELECT password_hash FROM users WHERE id=?', user.id);
   if (!(await S.verifyPassword(String(body.currentPassword || ''), row.password_hash))) throw new S.HttpError(400, 'Current password is incorrect');
   S.checkPassword(body.newPassword, { email: user.email, name: user.name });

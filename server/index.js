@@ -5,6 +5,7 @@ import { q } from './db.js';
 import { handle } from './http.js';
 import { seedIfEmpty, ensureAdmin } from './seed.js';
 import './routes/auth.js';
+import './routes/oidc.js';
 import './routes/public.js';
 import './routes/student.js';
 import './routes/admin.js';
@@ -13,6 +14,7 @@ export async function start(port = config.port, host = config.host) {
   seedIfEmpty();
   await ensureAdmin();
   setInterval(() => q.run('DELETE FROM sessions WHERE expires_at<?', Date.now()), 3600e3).unref();
+  setInterval(() => q.run('DELETE FROM oidc_transactions WHERE created_at<?', Date.now() - 10 * 60e3), 60e3).unref();
   const server = http.createServer(handle);
   server.requestTimeout = 30e3; server.headersTimeout = 15e3; server.keepAliveTimeout = 5e3;
   await new Promise((r) => server.listen(port, host, r));
